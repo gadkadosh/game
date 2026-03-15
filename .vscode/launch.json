@@ -1,0 +1,10 @@
+{
+  "configurations": [
+    {
+      "name": "Objective C Launch",
+      "type": "codelldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/handmade"
+    }
+  ]
+}
