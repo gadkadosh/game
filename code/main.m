@@ -1,19 +1,22 @@
 #import <AppKit/AppKit.h>
 #import <stdio.h>
 
-static int Width = 1024;
-static int Height = 768;
+typedef struct {
+    int width;
+    int height;
+    int bytesPerPixel;
+    int pitch;
+    unsigned char *memory;
+} Backbuffer;
 
 static bool Running;
+static Backbuffer GlobalBackbuffer;
 
-unsigned char *bitmapMemory;
-
-static void RenderGradient(int xOffset, int yOffset) {
-    int pitch = Width * 4;
-    uint8 *row = (uint8 *)bitmapMemory;
-    for (int y = 0; y < Height; y++) {
+static void RenderGradient(Backbuffer buffer, int xOffset, int yOffset) {
+    uint8 *row = (uint8 *)buffer.memory;
+    for (int y = 0; y < buffer.height; y++) {
         uint32 *pixel = (uint32 *)row;
-        for (int x = 0; x < Width; x++) {
+        for (int x = 0; x < buffer.width; x++) {
             int Red = 0;
             int Blue = x + xOffset;
             int Green = y + yOffset;
@@ -24,7 +27,7 @@ static void RenderGradient(int xOffset, int yOffset) {
 
             *pixel++ = (Red | Blue << 8 | Green << 16 | Alpha << 24);
         }
-        row += pitch;
+        row += buffer.pitch;
     }
 }
 
@@ -42,47 +45,40 @@ static void RenderGradient(int xOffset, int yOffset) {
 
 @implementation GameView
 - (void)drawRect:(NSRect)rect {
-    if (bitmapMemory) {
-        free(bitmapMemory);
-        bitmapMemory = NULL;
-    }
-
-    Height = self.bounds.size.height;
-    Width = self.bounds.size.width;
-    int pitch = Width * 4;
-
-    size_t size = Height * Width * 4;
-    bitmapMemory = malloc(size);
-
-    if (!bitmapMemory) {
-        NSLog(@"Bitmap Memory allocation failed");
-        return;
-    }
-
     NSBitmapImageRep *bitmapRep =
-        [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:&bitmapMemory
-                                                 pixelsWide:Width
-                                                 pixelsHigh:Height
+        [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:&GlobalBackbuffer.memory
+                                                 pixelsWide:GlobalBackbuffer.width
+                                                 pixelsHigh:GlobalBackbuffer.height
                                               bitsPerSample:8
-                                            samplesPerPixel:4
+                                            samplesPerPixel:GlobalBackbuffer.bytesPerPixel
                                                    hasAlpha:YES
                                                    isPlanar:NO
                                              colorSpaceName:NSCalibratedRGBColorSpace
-                                                bytesPerRow:pitch
+                                                bytesPerRow:GlobalBackbuffer.pitch
                                                bitsPerPixel:32] autorelease];
     [bitmapRep drawInRect:self.bounds];
-
-    NSLog(@"Redrawing");
 }
 @end
 
 int main() {
     NSLog(@"Starting Handmade Hero");
 
+    GlobalBackbuffer.width = 1024;
+    GlobalBackbuffer.height = 768;
+    GlobalBackbuffer.bytesPerPixel = 4;
+    GlobalBackbuffer.pitch = GlobalBackbuffer.width * GlobalBackbuffer.bytesPerPixel;
+    GlobalBackbuffer.memory = NULL;
+    size_t size = GlobalBackbuffer.height * GlobalBackbuffer.width * GlobalBackbuffer.bytesPerPixel;
+    GlobalBackbuffer.memory = malloc(size);
+    if (!GlobalBackbuffer.memory) {
+        NSLog(@"Bitmap Memory allocation failed");
+        return 1;
+    }
+
     HandmadeHeroMainWindowDelegate *mainWindowDelegate =
         [[HandmadeHeroMainWindowDelegate alloc] init];
 
-    NSRect frame = NSMakeRect(0, 0, Width, Height);
+    NSRect frame = NSMakeRect(0, 0, GlobalBackbuffer.width, GlobalBackbuffer.height);
 
     GameView *gameView = [[GameView alloc] initWithFrame:frame];
     if (!gameView) {
@@ -117,11 +113,11 @@ int main() {
                                                   inMode:NSDefaultRunLoopMode
                                                  dequeue:YES])) {
                 [NSApp sendEvent:Event];
-                NSLog(@"Received event: %@", Event);
             }
 
-            RenderGradient(xOffset, yOffset);
+            RenderGradient(GlobalBackbuffer, xOffset, yOffset);
             ++xOffset;
+            yOffset += 2;
 
             gameView.needsDisplay = YES;
 
