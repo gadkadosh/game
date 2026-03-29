@@ -17,15 +17,29 @@ static void RenderGradient(Backbuffer buffer, int xOffset, int yOffset) {
     for (int y = 0; y < buffer.height; y++) {
         uint32 *pixel = (uint32 *)row;
         for (int x = 0; x < buffer.width; x++) {
-            int Red = 0;
-            int Blue = x + xOffset;
-            int Green = y + yOffset;
-            int Alpha = 255;
+            uint8 Red;
+            uint8 Green;
+            uint8 Blue;
+            uint8 Alpha = 255;
+
+            if (((x + xOffset) / 256) % 3 == 0) {
+                Red = x + xOffset;
+                Green = 0;
+                Blue = y + yOffset;
+            } else if (((x + xOffset) / 256) % 3 == 1) {
+                Red = 0;
+                Green = x + xOffset;
+                Blue = y + yOffset;
+            } else {
+                Red = y + yOffset;
+                Green = x + xOffset;
+                Blue = 0;
+            }
 
             // RR GG BB AA
-            // Big Endianness -> AA BB GG RR
+            // Little Endian -> AA BB GG RR
 
-            *pixel++ = (Red | Blue << 8 | Green << 16 | Alpha << 24);
+            *pixel++ = (Red << 0 | Green << 8 | Blue << 16 | Alpha << 24);
         }
         row += buffer.pitch;
     }
@@ -87,6 +101,9 @@ int main() {
     }
 
     [NSApplication sharedApplication];
+    [NSApp setPresentationOptions:NSApplicationPresentationDefault];
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApp finishLaunching];
 
     NSWindow *window = [[NSWindow alloc]
         initWithContentRect:frame

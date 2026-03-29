@@ -2,7 +2,7 @@
 set -e
 
 CFLAGS="-g -Wall -Wextra"
-LDFLAGS="-framework Cocoa"
+LDFLAGS="-framework AppKit"
 
 mkdir -p build
 cd build
