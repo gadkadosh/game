@@ -9,6 +9,15 @@ typedef struct {
     unsigned char *memory;
 } Backbuffer;
 
+#define OFFSET 3
+
+#define KeyLeftArrow (1u << 0)
+#define KeyRightArrow (1u << 1)
+#define KeyUpArrow (1u << 2)
+#define KeyDownArrow (1u << 3)
+
+static unsigned int input;
+
 static bool Running;
 static Backbuffer GlobalBackbuffer;
 
@@ -119,6 +128,7 @@ int main() {
     [window setContentView:gameView];
 
     Running = true;
+
     int xOffset = 0;
     int yOffset = 0;
     while (Running) {
@@ -129,12 +139,48 @@ int main() {
                                                untilDate:nil
                                                   inMode:NSDefaultRunLoopMode
                                                  dequeue:YES])) {
-                [NSApp sendEvent:Event];
+
+                if (Event.type == NSEventTypeKeyDown) {
+                    if (Event.keyCode == 123) {
+                        input |= KeyLeftArrow;
+                    } else if (Event.keyCode == 124) {
+                        input |= KeyRightArrow;
+                    } else if (Event.keyCode == 126) {
+                        input |= KeyUpArrow;
+                    } else if (Event.keyCode == 125) {
+                        input |= KeyDownArrow;
+                    } else if (Event.keyCode == 53) {
+                        Running = false;
+                    }
+                } else if (Event.type == NSEventTypeKeyUp) {
+                    if (Event.keyCode == 123) {
+                        input &= ~KeyLeftArrow;
+                    } else if (Event.keyCode == 124) {
+                        input &= ~KeyRightArrow;
+                    } else if (Event.keyCode == 126) {
+                        input &= ~KeyUpArrow;
+                    } else if (Event.keyCode == 125) {
+                        input &= ~KeyDownArrow;
+                    }
+                } else {
+                    [NSApp sendEvent:Event];
+                }
+            }
+
+            if ((input & KeyLeftArrow) == KeyLeftArrow) {
+                xOffset += OFFSET;
+            }
+            if ((input & KeyRightArrow) == KeyRightArrow) {
+                xOffset -= OFFSET;
+            }
+            if ((input & KeyUpArrow) == KeyUpArrow) {
+                yOffset += OFFSET;
+            }
+            if ((input & KeyDownArrow) == KeyDownArrow) {
+                yOffset -= OFFSET;
             }
 
             RenderGradient(GlobalBackbuffer, xOffset, yOffset);
-            ++xOffset;
-            yOffset += 2;
 
             gameView.needsDisplay = YES;
 
